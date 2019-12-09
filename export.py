@@ -7,6 +7,7 @@ parser.add_argument(
     '--apikey',
     help='API key for Fusion Auth instance.',
     required=False,
+    # dont get too excited this API key is from an old dev instance :)
     default='av2sjd077G32obL5tuTpG-kw38-wQXW2eHLaccf9938'
 )
 parser.add_argument(
