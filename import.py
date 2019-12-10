@@ -233,6 +233,35 @@ def map_to_install(saved_dict, mappings):
 
 saved_config = map_to_install(saved_config, mappings)
 
+# '/api/key',
+_, update_application_request, delete_application_request = create_requests(
+    '/api/key',
+    'key'
+)
+
+
+def generate_key(key):
+    response = requests.post(
+        '{}{}'.format(args.url, '/api/key/generate'),
+        data=json.dumps({'key': {
+            'algorithm': key['algorithm'],
+            'name': key['name'],
+            'length': key['length']
+        }}),
+        headers=base_headers
+    )
+    handle_response(response, application)
+
+
+apply_saved(
+    'application',
+    saved_config['/api/application']["applications"],
+    existing_config['/api/application']["applications"],
+    create_application_request,
+    update_application_request,
+    delete_application_request
+)
+
 standard = [
     ('/api/email/template', 'emailTemplate'),
     ('/api/tenant', 'tenant'),
