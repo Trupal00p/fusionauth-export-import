@@ -234,7 +234,7 @@ def map_to_install(saved_dict, mappings):
 saved_config = map_to_install(saved_config, mappings)
 
 # '/api/key',
-_, update_application_request, delete_application_request = create_requests(
+_, update_key, delete_key = create_requests(
     '/api/key',
     'key'
 )
@@ -254,12 +254,12 @@ def generate_key(key):
 
 
 apply_saved(
-    'application',
-    saved_config['/api/application']["applications"],
-    existing_config['/api/application']["applications"],
-    create_application_request,
-    update_application_request,
-    delete_application_request
+    'key',
+    saved_config['/api/key']["keys"],
+    existing_config['/api/key']["keys"],
+    generate_key,
+    update_key,
+    delete_key
 )
 
 standard = [
