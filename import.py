@@ -198,13 +198,15 @@ for name in [
     if savedId and exisitingId:
         mappings[savedId] = exisitingId
 
+# map key ID's by name
 
-for name in [
-    'Default signing key',
-    "OpenID Connect compliant HMAC using SHA-256",
-    "OpenID Connect compliant HMAC using SHA-384",
-    "OpenID Connect compliant HMAC using SHA-512",
-]:
+existing_key_names = [
+    key['name']
+    for key
+    in existing_config['/api/key']['keys']
+]
+
+for name in existing_key_names:
     savedId = getId(
         saved_config,
         '/api/key',
