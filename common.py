@@ -1,4 +1,5 @@
 import requests
+import json
 
 
 def get_config(url, apikey):
@@ -17,6 +18,8 @@ def get_config(url, apikey):
 
         '/api/system-configuration',
         '/api/integration',
+
+        '/api/key'
 
     ]
     results = {}

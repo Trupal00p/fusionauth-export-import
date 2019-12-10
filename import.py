@@ -44,8 +44,8 @@ def handle_response(response, config):
     try:
         assert response.status_code == 200
     except AssertionError:
-        print 'Error:', response.status_code
         print response.content
+        print 'Error:', response.status_code
         print config['id']
 
 
@@ -66,7 +66,7 @@ def create_requests(endpoint, name):
         )
         handle_response(response, config)
 
-    def delete_request(application):
+    def delete_request(config):
         response = requests.delete(
             '{}{}/{}'.format(args.url, endpoint, config['id']),
             data="{}",
@@ -125,18 +125,18 @@ def apply_saved(
     #     print 'No changes detected.'
     #     return
 
+    for id in delete_ids:
+        print "Deleting {}: {}...".format(name, id)
+        delete_request(existing_indexed[id])
+
     for id in create_ids:
-        print 'Creating: ', id, '...'
+        print 'Creating {}: {}...'.format(name, id)
         create_request(saved_indexed[id])
 
     for id in update_ids:
         if similarity(saved_indexed[id], existing_indexed[id]) < 1:
-            print "Updating: ", id, '...'
+            print "Updating {}: {}...".format(name, id)
             update_request(saved_indexed[id])
-
-    for id in delete_ids:
-        print "Deleting: ", id, '...'
-        delete_request(saved_indexed[id])
 
 
 print "Pulling config from server ..."
@@ -145,6 +145,110 @@ existing_config = get_config(args.url, args.apikey)
 print 'Loading saved config from file system ...'
 with open(args.configfile, 'r') as config:
     saved_config = json.loads(config.read())
+
+# create mappings for default tenant id and standard email templates:
+mappings = {}
+
+
+def getId(config, endpoint, root, name):
+    return next((
+        t['id'] for t
+        in config[endpoint][root]
+        if t['name'] == name
+    ))
+
+
+existingDefaultTenant = getId(
+    existing_config,
+    '/api/tenant',
+    'tenants',
+    'Default'
+)
+savedDefaultTenant = getId(
+    saved_config,
+    '/api/tenant',
+    'tenants',
+    'Default'
+)
+
+if existingDefaultTenant and savedDefaultTenant:
+    mappings[savedDefaultTenant] = existingDefaultTenant
+
+for name in [
+    'COPPA Notice',
+    "COPPA Notice Reminder",
+    "Email Verification",
+    "Forgot Password",
+    "Passwordless Login",
+    "Registration Verification",
+    "Setup Password"
+]:
+    savedId = getId(
+        saved_config,
+        '/api/email/template',
+        'emailTemplates',
+        name
+    )
+    exisitingId = getId(
+        existing_config,
+        '/api/email/template',
+        'emailTemplates',
+        name
+    )
+    if savedId and exisitingId:
+        mappings[savedId] = exisitingId
+
+
+for name in [
+    'Default signing key',
+    "OpenID Connect compliant HMAC using SHA-256",
+    "OpenID Connect compliant HMAC using SHA-384",
+    "OpenID Connect compliant HMAC using SHA-512",
+]:
+    savedId = getId(
+        saved_config,
+        '/api/key',
+        'keys',
+        name
+    )
+    exisitingId = getId(
+        existing_config,
+        '/api/key',
+        'keys',
+        name
+    )
+    if savedId and exisitingId:
+        mappings[savedId] = exisitingId
+
+
+def map_to_install(saved_dict, mappings):
+    text = json.dumps(saved_dict)
+    for old, new in mappings.iteritems():
+
+        text = text.replace(old, new)
+    return json.loads(text)
+
+
+saved_config = map_to_install(saved_config, mappings)
+
+standard = [
+    ('/api/email/template', 'emailTemplate'),
+    ('/api/tenant', 'tenant'),
+    ('/api/user-action-reason', 'userActionReason'),
+    ('/api/user-action', 'userAction'),
+    ('/api/theme', 'theme'),
+    ('/api/lambda', 'lambda'),
+    ('/api/webhook', 'webhook'),
+]
+for endpoint, name in standard:
+    apply_saved(
+        *generate_apply_args(
+            saved_config,
+            existing_config,
+            endpoint,
+            name
+        )
+    )
 
 # '/api/application',
 _, update_application_request, delete_application_request = create_requests(
@@ -155,7 +259,7 @@ _, update_application_request, delete_application_request = create_requests(
 
 def create_application_request(application):
     tenantId = application.pop('tenantId')
-    requests.post(
+    response = requests.post(
         '{}{}/{}'.format(args.url, '/api/application', application['id']),
         data=json.dumps({'application': application}),
         headers=merge_dicts(
@@ -165,6 +269,7 @@ def create_application_request(application):
             }
         )
     )
+    handle_response(response, application)
 
 
 apply_saved(
@@ -269,26 +374,6 @@ apply_saved(
     update_application_request,
     delete_application_request
 )
-
-
-standard = [
-    ('/api/email/template', 'emailTemplate'),
-    ('/api/tenant', 'tenant'),
-    ('/api/theme', 'theme'),
-    ('/api/lambda', 'lambda'),
-    ('/api/user-action-reason', 'userActionReason'),
-    ('/api/user-action', 'userAction'),
-    ('/api/webhook', 'webhook'),
-]
-for endpoint, name in standard:
-    apply_saved(
-        *generate_apply_args(
-            saved_config,
-            existing_config,
-            endpoint,
-            name
-        )
-    )
 
 
 # update system config
