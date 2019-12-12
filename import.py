@@ -250,7 +250,7 @@ def generate_key(key):
         }}),
         headers=base_headers
     )
-    handle_response(response, application)
+    handle_response(response, key)
 
 
 apply_saved(
@@ -264,12 +264,12 @@ apply_saved(
 
 standard = [
     ('/api/email/template', 'emailTemplate'),
-    ('/api/tenant', 'tenant'),
     ('/api/user-action-reason', 'userActionReason'),
     ('/api/user-action', 'userAction'),
     ('/api/theme', 'theme'),
     ('/api/lambda', 'lambda'),
     ('/api/webhook', 'webhook'),
+    ('/api/tenant', 'tenant'),
 ]
 for endpoint, name in standard:
     apply_saved(
